@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
+import { useQuery } from '@tanstack/react-query';
 
 // Types
 type Page = 'login' | 'dashboard' | 'content-recommendations' | 'integrations' | 'settings';
@@ -21,7 +22,14 @@ interface Activity {
   message: string;
   time: string;
 }
-
+// This function tells the app how to fetch data from your API
+const fetchAnalyticsData = async () => {
+  const response = await fetch("http://localhost:5000/api/analytics");
+  if (!response.ok) {
+    throw new Error("Network response was not ok");
+  }
+  return response.json();
+};
 // Main App Component
 const Index = () => {
   const [currentPage, setCurrentPage] = useState<Page>('login');
@@ -41,20 +49,7 @@ const Index = () => {
   }, [darkMode]);
 
   // Dummy data
-  const metrics: Metric[] = [
-    { title: 'Total Engagements', value: '15,432', change: '+12.5%', trend: 'up', color: 'accent-blue' },
-    { title: 'New Followers', value: '+1,287', change: '+8.2%', trend: 'up', color: 'accent-green' },
-    { title: 'Average Reach', value: '7,890', change: '+15.3%', trend: 'up', color: 'accent-purple' },
-    { title: 'Conversion Rate', value: '3.4%', change: '+2.1%', trend: 'up', color: 'accent-orange' }
-  ];
-
-  const activities: Activity[] = [
-    { id: '1', message: 'New comment on your latest post', time: '2 minutes ago' },
-    { id: '2', message: 'Weekly report generated successfully', time: '1 hour ago' },
-    { id: '3', message: 'Instagram integration updated', time: '3 hours ago' },
-    { id: '4', message: 'New follower milestone reached', time: '1 day ago' }
-  ];
-
+  
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (username && password) {
@@ -239,7 +234,44 @@ const Index = () => {
   );
 
   // Dashboard Page Component
-  const DashboardPage = () => (
+// Dashboard Page Component - NOW WITH LIVE DATA
+const DashboardPage = () => {
+  const { data: analyticsData, isLoading, error } = useQuery({
+      queryKey: ["analyticsData"],
+      queryFn: fetchAnalyticsData,
+  });
+
+  // Show a loading message while waiting for data
+  if (isLoading) {
+      return <div className="p-6 text-lg">Loading Dashboard...</div>;
+  }
+
+  // Show an error message if something went wrong
+  if (error) {
+      return <div className="p-6 text-lg text-red-500">Error: {error.message}</div>;
+  }
+
+  // --- Once data is loaded, prepare it for the UI ---
+
+  // 1. Calculate the Total Engagements KPI from live data
+  const totalEngagements = analyticsData.reduce((sum, item) => sum + item.engagement, 0);
+
+  // 2. Create the metrics for the top cards (using a mix of live and dummy data)
+  const liveMetrics = [
+      { title: 'Total Engagements', value: totalEngagements.toLocaleString(), change: '+12.5%', trend: 'up', color: 'accent-blue' },
+      { title: 'New Followers', value: '+1,287', change: '+8.2%', trend: 'up', color: 'accent-green' },
+      { title: 'Average Reach', value: '7,890', change: '+15.3%', trend: 'up', color: 'accent-purple' },
+      { title: 'Conversion Rate', value: '3.4%', change: '+2.1%', trend: 'up', color: 'accent-orange' }
+  ];
+
+  // 3. Define some dummy activities (we can connect this to an API later)
+  const activities = [
+      { id: '1', message: 'New comment on your latest post', time: '2 minutes ago' },
+      { id: '2', message: 'Weekly report generated successfully', time: '1 hour ago' },
+      { id: '3', message: 'Instagram integration updated', time: '3 hours ago' },
+  ];
+
+  return (
     <div className="space-y-6">
       {/* Welcome Banner */}
       <div className="bg-gradient-primary rounded-xl p-6 text-primary-foreground shadow-primary">
@@ -249,7 +281,7 @@ const Index = () => {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {metrics.map((metric, index) => (
+        {liveMetrics.map((metric, index) => (
           <Card key={index} className="bg-gradient-card border-card-border shadow-card hover:shadow-elevated transition-all duration-300">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -271,58 +303,39 @@ const Index = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Engagement Chart */}
+        {/* Engagement Chart (Placeholder) */}
         <Card className="bg-gradient-card border-card-border shadow-card">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BarChart3 className="w-5 h-5 text-accent-blue" />
               <span>Engagement Over Time</span>
             </CardTitle>
-            <CardDescription>Daily engagement metrics for the last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-end space-x-2 p-4">
-              {[65, 78, 52, 89, 94, 76, 82].map((height, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center space-y-2">
-                  <div 
-                    className="bg-gradient-to-t from-accent-blue to-accent-purple rounded-t-sm transition-all duration-500 hover:opacity-80"
-                    style={{ height: `${height}%`, minHeight: '8px' }}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000).toLocaleDateString('en', { weekday: 'short' })}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <div className="h-64 flex items-center justify-center text-muted-foreground">Chart using live data would go here.</div>
           </CardContent>
         </Card>
 
-        {/* Content Performance Chart */}
+        {/* Content Performance Chart (Live Data) */}
         <Card className="bg-gradient-card border-card-border shadow-card">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Users className="w-5 h-5 text-accent-green" />
               <span>Content Performance</span>
             </CardTitle>
-            <CardDescription>Performance by content type</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { label: 'Image Posts', value: 85, color: 'bg-accent-blue' },
-                { label: 'Video Posts', value: 92, color: 'bg-accent-green' },
-                { label: 'Text Updates', value: 67, color: 'bg-accent-orange' },
-                { label: 'Stories', value: 74, color: 'bg-accent-purple' }
-              ].map((item, index) => (
+              {analyticsData.map((item, index) => (
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="font-medium text-foreground">{item.label}</span>
-                    <span className="text-muted-foreground">{item.value}%</span>
+                    <span className="font-medium text-foreground">{item.postType}</span>
+                    <span className="text-muted-foreground">{item.engagement}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
-                      className={`${item.color} h-2 rounded-full transition-all duration-500`}
-                      style={{ width: `${item.value}%` }}
+                      className={'bg-accent-blue h-2 rounded-full'}
+                      style={{ width: `${item.engagement}%` }}
                     />
                   </div>
                 </div>
@@ -335,28 +348,28 @@ const Index = () => {
       {/* Recent Activity */}
       <Card className="bg-gradient-card border-card-border shadow-card">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Calendar className="w-5 h-5 text-accent-purple" />
-            <span>Recent Activity</span>
-          </CardTitle>
-          <CardDescription>Your latest platform activities</CardDescription>
+            <CardTitle className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-accent-purple" />
+                <span>Recent Activity</span>
+            </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+            <div className="space-y-4">
             {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-dashboard-accent/50 transition-colors">
-                <div className="w-2 h-2 bg-accent-blue rounded-full mt-2 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{activity.message}</p>
-                  <p className="text-xs text-muted-foreground">{activity.time}</p>
+                <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-dashboard-accent/50 transition-colors">
+                    <div className="w-2 h-2 bg-accent-blue rounded-full mt-2 flex-shrink-0" />
+                    <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">{activity.message}</p>
+                        <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    </div>
                 </div>
-              </div>
             ))}
-          </div>
+            </div>
         </CardContent>
       </Card>
     </div>
   );
+};
 
   // Content Recommendations Page
   const ContentRecommendationsPage = () => (
